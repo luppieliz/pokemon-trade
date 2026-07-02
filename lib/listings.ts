@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { list, put } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
 import type { Listing } from "./types";
 
 // Storage backend:
@@ -23,18 +23,21 @@ function isServerless(): boolean {
 // ---- Blob backend --------------------------------------------------------
 
 async function readBlob(): Promise<Listing[]> {
-  const { blobs } = await list({ prefix: BLOB_KEY });
-  const blob = blobs.find((b) => b.pathname === BLOB_KEY);
-  if (!blob) return [];
-  const res = await fetch(blob.url, { cache: "no-store" });
-  if (!res.ok) return [];
-  const data = await res.json().catch(() => []);
-  return Array.isArray(data) ? data : [];
+  // get() returns null if the blob doesn't exist yet (nothing listed).
+  const result = await get(BLOB_KEY, { access: "private" });
+  if (!result) return [];
+  try {
+    const text = await new Response(result.stream).text();
+    const data = JSON.parse(text);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 }
 
 async function writeBlob(listings: Listing[]): Promise<void> {
   await put(BLOB_KEY, JSON.stringify(listings, null, 2), {
-    access: "public",
+    access: "private",
     contentType: "application/json",
     addRandomSuffix: false,
     allowOverwrite: true,
