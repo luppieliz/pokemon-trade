@@ -4,8 +4,10 @@ import { getMarkup } from "@/lib/config";
 import MarketplaceClient from "@/components/MarketplaceClient";
 import type { Listing } from "@/lib/types";
 
-// Re-fetch prices periodically rather than on every request.
-export const revalidate = 1800;
+// Always read the current listings on each request so newly added cards show
+// immediately. Prices are still cached (the JustTCG fetch uses revalidate),
+// so this doesn't burn API calls.
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const listings = await getListings();
