@@ -29,23 +29,27 @@ export default function AdminPage() {
       return;
     }
     setStatus("Listing…");
-    const res = await fetch("/api/admin/listings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": password },
-      body: JSON.stringify({ card, condition, notes }),
-    });
-    const data = await res.json();
-    if (res.ok && data.ok) {
-      setListings(data.listings);
-      setCard(null);
-      setNotes("");
-      setStatus("Listed! ✅ (add another below)");
-    } else {
-      setStatus(
-        res.status === 401
-          ? "Incorrect admin password — check ADMIN_PASSWORD in .env.local."
-          : data.error || "Failed to list. Please try again."
-      );
+    try {
+      const res = await fetch("/api/admin/listings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": password },
+        body: JSON.stringify({ card, condition, notes }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        setListings(data.listings);
+        setCard(null);
+        setNotes("");
+        setStatus("Listed! ✅ (add another below)");
+      } else {
+        setStatus(
+          res.status === 401
+            ? "Incorrect admin password."
+            : data.error || `Failed to list (HTTP ${res.status}). Please try again.`
+        );
+      }
+    } catch {
+      setStatus("Network error — please try again.");
     }
   }
 
@@ -54,18 +58,22 @@ export default function AdminPage() {
       setStatus("Enter your admin password above first.");
       return;
     }
-    const res = await fetch(`/api/admin/listings?id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      headers: { "x-admin-password": password },
-    });
-    const data = await res.json();
-    if (res.ok && data.ok) setListings(data.listings);
-    else
-      setStatus(
-        res.status === 401
-          ? "Incorrect admin password — check ADMIN_PASSWORD in .env.local."
-          : data.error || "Failed to remove."
-      );
+    try {
+      const res = await fetch(`/api/admin/listings?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { "x-admin-password": password },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) setListings(data.listings);
+      else
+        setStatus(
+          res.status === 401
+            ? "Incorrect admin password."
+            : data.error || `Failed to remove (HTTP ${res.status}).`
+        );
+    } catch {
+      setStatus("Network error — please try again.");
+    }
   }
 
   return (

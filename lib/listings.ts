@@ -15,6 +15,11 @@ function useBlob(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
+// True on Vercel, where the filesystem is read-only and Blob is required.
+function isServerless(): boolean {
+  return process.env.VERCEL === "1";
+}
+
 // ---- Blob backend --------------------------------------------------------
 
 async function readBlob(): Promise<Listing[]> {
@@ -60,7 +65,13 @@ export async function getListings(): Promise<Listing[]> {
 }
 
 export async function saveListings(listings: Listing[]): Promise<void> {
-  return useBlob() ? writeBlob(listings) : writeFile(listings);
+  if (useBlob()) return writeBlob(listings);
+  if (isServerless()) {
+    throw new Error(
+      "Storage isn't connected. In your Vercel project: Storage → Create Database → Blob → connect it to this project, then redeploy."
+    );
+  }
+  return writeFile(listings);
 }
 
 export async function addListing(listing: Listing): Promise<Listing[]> {

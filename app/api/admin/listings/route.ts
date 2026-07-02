@@ -40,8 +40,15 @@ export async function POST(request: Request) {
     listedAt: new Date().toISOString(),
   };
 
-  const listings = await addListing(listing);
-  return NextResponse.json({ ok: true, listings });
+  try {
+    const listings = await addListing(listing);
+    return NextResponse.json({ ok: true, listings });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message || "Failed to save listing" },
+      { status: 500 }
+    );
+  }
 }
 
 // Remove a listing by id. Requires the admin password.
@@ -54,6 +61,13 @@ export async function DELETE(request: Request) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
-  const listings = await removeListing(id);
-  return NextResponse.json({ ok: true, listings });
+  try {
+    const listings = await removeListing(id);
+    return NextResponse.json({ ok: true, listings });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message || "Failed to remove listing" },
+      { status: 500 }
+    );
+  }
 }
