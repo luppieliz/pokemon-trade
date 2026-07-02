@@ -43,3 +43,32 @@ export interface Listing extends CardInfo {
   notes?: string;
   listedAt: string; // ISO date
 }
+
+/** A card referenced inside an enquiry (buy target or offered card). */
+export interface EnquiryCard {
+  name: string;
+  printedNumber: string;
+  setName: string;
+  condition: string;
+  quantity?: number;
+  price?: CardPrice;
+}
+
+/** A buy request or trade offer sent by a visitor. */
+export interface Enquiry {
+  id: string;
+  receivedAt: string; // ISO date
+  type: "buy" | "trade";
+  delivered: boolean; // whether it reached Telegram
+  contact: { name: string; telegram: string };
+  message?: string;
+  // buy
+  card?: EnquiryCard;
+  buyValue?: number;
+  // trade
+  target?: EnquiryCard;
+  offered?: EnquiryCard[];
+  offeredTotal?: number;
+  targetValue?: number;
+  fairness?: string;
+}

@@ -2,15 +2,15 @@
 
 import AdminGate from "@/components/AdminGate";
 import AdminNav from "@/components/AdminNav";
-import ListingsManager from "@/components/ListingsManager";
+import EnquiriesView from "@/components/EnquiriesView";
 
-export default function AdminPage() {
+export default function HistoryPage() {
   return (
     <AdminGate>
       {(password, lock) => (
         <>
-          <AdminNav current="listings" onLock={lock} />
-          <ListingsManager password={password} />
+          <AdminNav current="history" onLock={lock} />
+          <EnquiriesView password={password} />
         </>
       )}
     </AdminGate>

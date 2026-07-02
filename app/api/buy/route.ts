@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { formatMoney } from "@/lib/format";
 import { getMarkup, applyMarkup, markupLabel } from "@/lib/config";
+import { addEnquiry } from "@/lib/enquiries";
 
 function esc(s: unknown): string {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function newId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export async function POST(request: Request) {
@@ -50,24 +53,26 @@ export async function POST(request: Request) {
     `<b>From:</b> ${esc(contact.name)} (${esc(contact.telegram)})\n` +
     (message ? `<b>Message:</b> ${esc(message)}\n` : "");
 
-  // Best-effort log to disk (tagged so buys and trades are distinguishable).
-  try {
-    const file = path.join(process.cwd(), "data", "trades.json");
-    let existing: any[] = [];
-    try {
-      existing = JSON.parse(await fs.readFile(file, "utf8"));
-      if (!Array.isArray(existing)) existing = [];
-    } catch {
-      existing = [];
-    }
-    existing.unshift({ receivedAt: new Date().toISOString(), type: "buy", buyValue, ...body });
-    await fs.mkdir(path.dirname(file), { recursive: true });
-    await fs.writeFile(file, JSON.stringify(existing, null, 2), "utf8");
-  } catch {
-    // ignore logging failures
-  }
-
   const tg = await sendTelegramMessage(text);
+  const delivered = tg.configured && tg.ok;
+
+  // Persist to the enquiry log (best-effort; never blocks the response).
+  await addEnquiry({
+    id: newId(),
+    receivedAt: new Date().toISOString(),
+    type: "buy",
+    delivered,
+    contact: { name: String(contact.name), telegram: String(contact.telegram) },
+    message: message ? String(message) : undefined,
+    card: {
+      name: card.name,
+      printedNumber: card.printedNumber,
+      setName: card.setName,
+      condition: card.condition,
+      price: card.price,
+    },
+    buyValue: buyValue ?? undefined,
+  });
 
   if (!tg.configured) {
     return NextResponse.json({ ok: true, delivered: false });

@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { formatMoney } from "@/lib/format";
+import { addEnquiry } from "@/lib/enquiries";
+import type { EnquiryCard } from "@/lib/types";
 
 function esc(s: unknown): string {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function newId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function money(p: any): string {
@@ -60,24 +64,40 @@ export async function POST(request: Request) {
     `<b>From:</b> ${esc(contact.name)} (${esc(contact.telegram)})\n` +
     (message ? `<b>Message:</b> ${esc(message)}\n` : "");
 
-  // Best-effort log to disk (works locally; may be read-only on some hosts).
-  try {
-    const file = path.join(process.cwd(), "data", "trades.json");
-    let existing: any[] = [];
-    try {
-      existing = JSON.parse(await fs.readFile(file, "utf8"));
-      if (!Array.isArray(existing)) existing = [];
-    } catch {
-      existing = [];
-    }
-    existing.unshift({ receivedAt: new Date().toISOString(), ...body });
-    await fs.mkdir(path.dirname(file), { recursive: true });
-    await fs.writeFile(file, JSON.stringify(existing, null, 2), "utf8");
-  } catch {
-    // ignore logging failures
-  }
-
   const tg = await sendTelegramMessage(text);
+  const delivered = tg.configured && tg.ok;
+
+  // Persist to the enquiry log (best-effort; never blocks the response).
+  await addEnquiry({
+    id: newId(),
+    receivedAt: new Date().toISOString(),
+    type: "trade",
+    delivered,
+    contact: { name: String(contact.name), telegram: String(contact.telegram) },
+    message: message ? String(message) : undefined,
+    target: target
+      ? {
+          name: target.name,
+          printedNumber: target.printedNumber,
+          setName: target.setName,
+          condition: target.condition,
+          price: target.price,
+        }
+      : undefined,
+    offered: (offered as any[]).map(
+      (o): EnquiryCard => ({
+        name: o.name,
+        printedNumber: o.printedNumber,
+        setName: o.setName,
+        condition: o.condition,
+        quantity: o.quantity,
+        price: o.price,
+      })
+    ),
+    offeredTotal: Number(offeredTotal || 0),
+    targetValue: Number(targetValue || 0),
+    fairness: fairness ? String(fairness) : undefined,
+  });
 
   if (!tg.configured) {
     // Telegram not set up yet — the offer is still logged so nothing is lost.
