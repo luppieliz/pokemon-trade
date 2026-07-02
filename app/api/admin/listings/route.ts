@@ -8,8 +8,12 @@ function authorized(request: Request): boolean {
   return request.headers.get("x-admin-password") === expected;
 }
 
-// List current listings (public — same data the marketplace shows).
-export async function GET() {
+// List current listings for the admin view. Requires the admin password
+// (the public marketplace reads listings directly, not through this route).
+export async function GET(request: Request) {
+  if (!authorized(request)) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+  }
   const listings = await getListings();
   return NextResponse.json({ listings });
 }
