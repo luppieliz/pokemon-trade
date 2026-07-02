@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: linear-gradient(180deg, #fafafa 0%, #f3f4f6 100%);
+  min-height: 100vh;
+}
+
+/* Subtle card hover lift */
+.card-lift {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.35);
+}
