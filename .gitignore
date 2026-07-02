@@ -29,3 +29,6 @@ next-env.d.ts
 
 # runtime data (received trade/buy offers may contain personal info)
 /data/trades.json
+
+# stray nested project
+/SquishyTCG
